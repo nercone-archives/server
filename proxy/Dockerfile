@@ -42,6 +42,11 @@ RUN echo "Building Nginx ${NGINX_VERSION}" \
         --http-log-path=/var/log/nginx/access.log \
         --error-log-path=/var/log/nginx/error.log \
         --pid-path=/run/nginx.pid \
+        --http-client-body-temp-path=/var/cache/nginx/client_body \
+        --http-proxy-temp-path=/var/cache/nginx/proxy \
+        --http-fastcgi-temp-path=/var/cache/nginx/fastcgi \
+        --http-uwsgi-temp-path=/var/cache/nginx/uwsgi \
+        --http-scgi-temp-path=/var/cache/nginx/scgi \
         --user=nginx \
         --group=nginx \
         --with-cc-opt="-I/usr/local/include -O2" \
@@ -78,16 +83,17 @@ RUN groupadd -r nginx && useradd -r -g nginx -s /sbin/nologin -d /nonexistent ng
 
 RUN ldconfig
 
-RUN mkdir -p /etc/nginx/conf.d /etc/nginx/stream.d /etc/nginx/snippets /var/log/nginx /run/website \
-    && chown nginx:nginx /var/log/nginx
+RUN mkdir -p /etc/nginx/conf.d /etc/nginx/stream.d /etc/nginx/snippets /var/cache/nginx /var/log/nginx /run/website \
+    && chown nginx:nginx /var/cache/nginx /var/log/nginx
 
 FROM gcr.io/distroless/base-debian12
 
-COPY --from=setup /etc/passwd    /etc/passwd
-COPY --from=setup /etc/group     /etc/group
-COPY --from=setup /etc/nginx     /etc/nginx
-COPY --from=setup /var/log/nginx /var/log/nginx
-COPY --from=setup /run/website   /run/website
+COPY --from=setup /etc/passwd      /etc/passwd
+COPY --from=setup /etc/group       /etc/group
+COPY --from=setup /etc/nginx       /etc/nginx
+COPY --from=setup /var/cache/nginx /var/cache/nginx
+COPY --from=setup /var/log/nginx   /var/log/nginx
+COPY --from=setup /run/website     /run/website
 
 COPY --from=nginx-builder /usr/local/lib/       /usr/local/lib/
 COPY --from=nginx-builder /usr/sbin/nginx       /usr/sbin/nginx
