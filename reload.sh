@@ -1,0 +1,7 @@
+#!/usr/bin/env bash
+set -e
+
+sudo git pull
+
+docker compose exec proxy nginx -t
+docker compose exec proxy nginx -s reload
