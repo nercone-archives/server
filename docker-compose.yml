@@ -1,0 +1,136 @@
+services:
+  proxy:
+    build:
+      context: ./proxy
+    restart: unless-stopped
+    network_mode: host
+    volumes:
+      - ./proxy/etc:/etc/nginx:ro
+      - ./proxy/log:/var/log/nginx:rw
+      - /etc/letsencrypt:/etc/letsencrypt:ro
+      - /run/website:/run/website
+
+  gitea:
+    container_name: gitea
+    image: gitea/gitea:latest
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:8081:3000"
+      - "22:22"
+    volumes:
+      - ./gitea:/data
+    environment:
+      - USER_UID=1000
+      - USER_GID=1000
+      - GITEA__database__DB_TYPE=postgres
+      - GITEA__database__HOST=postgres:5432
+      - GITEA__database__NAME=gitea
+      - GITEA__database__USER=gitea
+      - GITEA__database__PASSWD=${GITEA_DB_PASSWORD}
+      - GITEA__server__DOMAIN=git.nercone.dev
+      - GITEA__server__ROOT_URL=https://git.nercone.dev/
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://127.0.0.1:3000/api/healthz"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  pds:
+    container_name: pds
+    image: ghcr.io/bluesky-social/pds:0.4
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:8082:3000"
+    volumes:
+      - ./pds:/pds
+    environment:
+      - PDS_HOSTNAME=pds.nercone.dev
+      - PDS_JWT_SECRET=${PDS_JWT_SECRET}
+      - PDS_ADMIN_PASSWORD=${PDS_ADMIN_PASSWORD}
+      - PDS_PLC_ROTATION_KEY_K256_PRIVATE_KEY_HEX=${PDS_PLC_ROTATION_KEY_K256_PRIVATE_KEY_HEX}
+      - PDS_DATA_DIRECTORY=/pds
+      - PDS_BLOBSTORE_DISK_LOCATION=/pds/blocks
+      - PDS_BLOB_UPLOAD_LIMIT=314572800
+      - PDS_DID_PLC_URL=https://plc.directory
+      - PDS_BSKY_APP_VIEW_URL=https://api.bsky.app
+      - PDS_BSKY_APP_VIEW_DID=did:web:api.bsky.app
+      - PDS_REPORT_SERVICE_URL=https://mod.bsky.app
+      - PDS_REPORT_SERVICE_DID=did:plc:ar7c4by46qjdydhdevvrndac
+      - PDS_CRAWLERS=https://bsky.network
+      - LOG_ENABLED=true
+      - PDS_RATE_LIMITS_ENABLED=true
+      - PDS_INVITE_REQUIRED=true
+      - PDS_EMAIL_SMTP_URL=smtps://pds%40nercone.dev:${PDS_EMAIL_SMTP_PASSWORD}@mx.nercone.dev:465/
+      - PDS_EMAIL_FROM_ADDRESS=pds@nercone.dev
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:3000/xrpc/_health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
+
+  keycloak:
+    container_name: keycloak
+    image: quay.io/keycloak/keycloak:26.7
+    restart: unless-stopped
+    command: start
+    ports:
+      - "127.0.0.1:8083:8080"
+    environment:
+      - KC_BOOTSTRAP_ADMIN_USERNAME=nercone
+      - KC_BOOTSTRAP_ADMIN_PASSWORD=${KEYCLOAK_PASSWORD}
+      - KC_DB=postgres
+      - KC_DB_URL=jdbc:postgresql://postgres:5432/keycloak
+      - KC_DB_USERNAME=keycloak
+      - KC_DB_PASSWORD=${KEYCLOAK_DB_PASSWORD}
+      - KC_HOSTNAME=auth.nercone.dev
+      - KC_PROXY_HEADERS=xforwarded
+      - KC_HTTP_ENABLED=true
+      - KC_HEALTH_ENABLED=true
+    healthcheck:
+      test: ["CMD-SHELL", "exec 3<>/dev/tcp/127.0.0.1/9000 && printf 'GET /health/ready HTTP/1.1\\r\\nhost: localhost\\r\\nConnection: close\\r\\n\\r\\n' >&3 && grep -q '\"status\": \"UP\"' <&3"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 60s
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  postgres:
+    container_name: postgres
+    image: postgres:18-alpine
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:5432:5432"
+    volumes:
+      - ./postgres/data:/var/lib/postgresql
+      - ./postgres/initdb.d:/docker-entrypoint-initdb.d:ro
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+      - GITEA_DB_PASSWORD=${GITEA_DB_PASSWORD}
+      - KEYCLOAK_DB_PASSWORD=${KEYCLOAK_DB_PASSWORD}
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+  watchtower:
+    container_name: watchtower
+    image: ghcr.io/nicholas-fedor/watchtower:latest
+    restart: unless-stopped
+    command: pds
+    volumes:
+      - type: bind
+        source: /var/run/docker.sock
+        target: /var/run/docker.sock
+    environment:
+      WATCHTOWER_CLEANUP: "true"
+      WATCHTOWER_SCHEDULE: "@midnight"
