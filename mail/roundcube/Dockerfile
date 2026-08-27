@@ -4,7 +4,7 @@ ARG TRIXIE_PACKAGES_VERSION
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
         php8.4-fpm php8.4-pgsql php8.4-intl php8.4-mbstring php8.4-gd php8.4-zip \
-        php8.4-xml php8.4-curl php8.4-ldap php8.4-bcmath php8.4-sodium \
+        php8.4-xml php8.4-curl php8.4-ldap php8.4-bcmath \
         gnupg curl ca-certificates \
     && rm -rf /var/lib/apt/lists/*
 
@@ -16,10 +16,14 @@ RUN echo "Installing Roundcube ${ROUNDCUBE_VERSION}" \
     && mv "/tmp/roundcubemail-${ROUNDCUBE_VERSION}" /opt/roundcube \
     && rm -rf /opt/roundcube/installer /tmp/roundcubemail-*
 
+RUN rm -f /etc/php/8.4/fpm/pool.d/www.conf \
+    && sed -i 's#^error_log = .*#error_log = /proc/self/fd/2#' /etc/php/8.4/fpm/php-fpm.conf
+
 COPY etc/php-fpm.conf /etc/php/8.4/fpm/pool.d/roundcube.conf
 
+COPY entrypoint.sh /usr/local/bin/entrypoint.sh
+
 EXPOSE 9000
-COPY entrypoint.sh    /usr/local/bin/entrypoint.sh
 
 STOPSIGNAL SIGQUIT
 
