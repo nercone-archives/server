@@ -19,7 +19,6 @@ cp /etc/letsencrypt/live/nercone.dev/privkey.pem   /etc/postfix/tls/privkey.pem
 chown root:postfix /etc/postfix/tls/fullchain.pem /etc/postfix/tls/privkey.pem
 chmod 640 /etc/postfix/tls/fullchain.pem /etc/postfix/tls/privkey.pem
 
-postfix set-permissions
 postfix check
 
 exec postfix start-fg

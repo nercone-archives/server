@@ -9,7 +9,6 @@ fi
 envsubst '${GCP_TAILNET_IP}' < /etc/postfix.d/main.cf > /etc/postfix/main.cf
 cp /etc/postfix.d/master.cf /etc/postfix/master.cf
 
-postfix set-permissions
 postfix check
 
 exec postfix start-fg
