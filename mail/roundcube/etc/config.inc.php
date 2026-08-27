@@ -11,7 +11,7 @@ $config['smtp_pass']        = '%p';
 $config['managesieve_host'] = 'dovecot:4190';
 
 $config['support_url']  = '';
-$config['product_name'] = 'Nercone Mail';
+$config['product_name'] = 'mx.nercone.dev';
 $config['des_key']      = getenv('ROUNDCUBE_DES_KEY');
 
 $config['username_domain'] = 'nercone.dev';

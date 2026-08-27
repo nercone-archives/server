@@ -50,3 +50,6 @@ docker compose build \
     --build-arg ROUNDCUBE_VERSION="${ROUNDCUBE_VERSION}"
 
 docker compose up -d
+
+docker compose exec proxy nginx -t
+docker compose exec proxy nginx -s reload
