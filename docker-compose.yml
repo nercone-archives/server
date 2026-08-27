@@ -1,5 +1,6 @@
 services:
   proxy:
+    container_name: proxy
     build:
       context: ./proxy
     restart: unless-stopped
