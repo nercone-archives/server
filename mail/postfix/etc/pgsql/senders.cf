@@ -1,0 +1,8 @@
+hosts    = postgres
+dbname   = mail
+user     = mail
+password = ${MAIL_DB_PASSWORD}
+
+query = SELECT username || '@' || domain AS login FROM accounts WHERE username = '%u' AND domain = '%d' AND active
+        UNION
+        SELECT destination AS login FROM aliases WHERE source = '%s' AND active

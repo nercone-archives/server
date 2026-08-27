@@ -58,6 +58,8 @@ RUN echo "Building Nginx ${NGINX_VERSION}" \
         --with-stream \
         --with-stream_ssl_module \
         --with-stream_ssl_preread_module \
+        --with-mail \
+        --with-mail_ssl_module \
         --with-pcre \
         --with-pcre-jit \
     && make -j"$(nproc)" \
@@ -83,23 +85,24 @@ RUN groupadd -r nginx && useradd -r -g nginx -s /sbin/nologin -d /nonexistent ng
 
 RUN ldconfig
 
-RUN mkdir -p /etc/nginx/conf.d /etc/nginx/stream.d /etc/nginx/snippets /var/cache/nginx /var/log/nginx /run/website \
+RUN mkdir -p /etc/nginx/conf.d /etc/nginx/stream.d /etc/nginx/mail.d /etc/nginx/snippets /var/cache/nginx /var/log/nginx /run/website /var/www/roundcube \
     && chown nginx:nginx /var/cache/nginx /var/log/nginx
 
 FROM gcr.io/distroless/base-debian12
 
-COPY --from=setup /etc/passwd      /etc/passwd
-COPY --from=setup /etc/group       /etc/group
-COPY --from=setup /etc/nginx       /etc/nginx
-COPY --from=setup /var/cache/nginx /var/cache/nginx
-COPY --from=setup /var/log/nginx   /var/log/nginx
-COPY --from=setup /run/website     /run/website
+COPY --from=setup /etc/passwd        /etc/passwd
+COPY --from=setup /etc/group         /etc/group
+COPY --from=setup /etc/nginx         /etc/nginx
+COPY --from=setup /var/cache/nginx   /var/cache/nginx
+COPY --from=setup /var/log/nginx     /var/log/nginx
+COPY --from=setup /var/www/roundcube /var/www/roundcube
+COPY --from=setup /run/website       /run/website
 
 COPY --from=nginx-builder /usr/local/lib/       /usr/local/lib/
 COPY --from=nginx-builder /usr/sbin/nginx       /usr/sbin/nginx
 COPY --from=nginx-builder /etc/nginx/mime.types /usr/local/share/nginx/mime.types
 
-EXPOSE 80 443/tcp 443/udp
+EXPOSE 25 80 143 443/tcp 443/udp 465 587 993
 
 STOPSIGNAL SIGQUIT
 

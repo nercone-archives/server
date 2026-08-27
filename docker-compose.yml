@@ -12,6 +12,7 @@ services:
       - ./proxy/log:/var/log/nginx:rw
       - /etc/letsencrypt:/etc/letsencrypt:ro
       - /run/website:/run/website
+      - ./mail/roundcube/html:/var/www/roundcube:ro
 
   gitea:
     container_name: gitea
@@ -85,16 +86,130 @@ services:
     volumes:
       - ./postgres/data:/var/lib/postgresql
       - ./postgres/initdb.d:/docker-entrypoint-initdb.d:ro
+    networks:
+      - default
+      - mail
     environment:
       - POSTGRES_USER=postgres
       - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
       - GITEA_DB_PASSWORD=${GITEA_DB_PASSWORD}
+      - MAIL_DB_PASSWORD=${MAIL_DB_PASSWORD}
+      - ROUNDCUBE_DB_PASSWORD=${ROUNDCUBE_DB_PASSWORD}
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER}"]
       interval: 10s
       timeout: 5s
       retries: 5
       start_period: 10s
+
+  mail-postfix:
+    container_name: mail-postfix
+    build:
+      context: ./mail/postfix
+    restart: unless-stopped
+    labels:
+      - com.centurylinklabs.watchtower.enable=false
+    ports:
+      - "25:25"
+      - "127.0.0.1:10025:10025"
+    networks:
+      - mail
+    volumes:
+      - ./mail/postfix/etc:/etc/postfix.d:ro
+      - ./mail/data/spool:/var/spool/postfix
+      - /etc/letsencrypt:/etc/letsencrypt:ro
+    environment:
+      - MAIL_DB_PASSWORD=${MAIL_DB_PASSWORD}
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  mail-dovecot:
+    container_name: mail-dovecot
+    build:
+      context: ./mail/dovecot
+    restart: unless-stopped
+    labels:
+      - com.centurylinklabs.watchtower.enable=false
+    ports:
+      - "127.0.0.1:10143:143"
+    networks:
+      - mail
+    volumes:
+      - ./mail/dovecot/etc:/etc/dovecot.d:ro
+      - ./mail/dovecot/sieve:/etc/dovecot-sieve:ro
+      - ./mail/data/vmail:/srv/vmail
+    environment:
+      - MAIL_DB_PASSWORD=${MAIL_DB_PASSWORD}
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  mail-auth:
+    container_name: mail-auth
+    build:
+      context: ./mail/auth
+    restart: unless-stopped
+    labels:
+      - com.centurylinklabs.watchtower.enable=false
+    ports:
+      - "127.0.0.1:10080:10080"
+    networks:
+      - mail
+    depends_on:
+      - mail-dovecot
+
+  mail-roundcube:
+    container_name: mail-roundcube
+    build:
+      context: ./mail/roundcube
+    restart: unless-stopped
+    labels:
+      - com.centurylinklabs.watchtower.enable=false
+    ports:
+      - "127.0.0.1:8083:9000"
+    networks:
+      - mail
+    volumes:
+      - ./mail/roundcube/etc:/etc/roundcube:ro
+      - ./mail/roundcube/html:/var/www/roundcube
+      - ./mail/data/roundcube:/var/lib/roundcube
+    environment:
+      - ROUNDCUBE_DB_PASSWORD=${ROUNDCUBE_DB_PASSWORD}
+      - ROUNDCUBE_DES_KEY=${ROUNDCUBE_DES_KEY}
+      - MAIL_DB_PASSWORD=${MAIL_DB_PASSWORD}
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  mail-rspamd:
+    container_name: mail-rspamd
+    build:
+      context: ./mail/rspamd
+    restart: unless-stopped
+    labels:
+      - com.centurylinklabs.watchtower.enable=false
+    ports:
+      - "127.0.0.1:11334:11334"
+    networks:
+      - mail
+    volumes:
+      - ./mail/rspamd/etc:/etc/rspamd.d:ro
+      - ./mail/data/rspamd:/var/lib/rspamd
+    environment:
+      - RSPAMD_PASSWORD=${RSPAMD_PASSWORD}
+    depends_on:
+      - mail-redis
+
+  mail-redis:
+    container_name: mail-redis
+    image: redis:8-alpine
+    restart: unless-stopped
+    command: ["redis-server", "--save", "300", "10", "--appendonly", "no"]
+    networks:
+      - mail
+    volumes:
+      - ./mail/data/redis:/data
 
   watchtower:
     container_name: watchtower
@@ -108,3 +223,10 @@ services:
       TZ: "Asia/Tokyo"
       WATCHTOWER_CLEANUP: "true"
       WATCHTOWER_SCHEDULE: "0 0 9 * * *"
+
+networks:
+  mail:
+    name: mail
+    ipam:
+      config:
+        - subnet: 172.30.0.0/24

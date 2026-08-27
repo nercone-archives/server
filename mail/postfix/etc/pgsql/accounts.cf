@@ -1,0 +1,6 @@
+hosts    = postgres
+dbname   = mail
+user     = mail
+password = ${MAIL_DB_PASSWORD}
+
+query = SELECT 1 FROM accounts WHERE username = '%u' AND domain = '%d' AND active

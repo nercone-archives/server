@@ -1,0 +1,26 @@
+FROM debian:trixie-slim
+
+ARG TRIXIE_PACKAGES_VERSION
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+        php8.4-fpm php8.4-pgsql php8.4-intl php8.4-mbstring php8.4-gd php8.4-zip \
+        php8.4-xml php8.4-curl php8.4-ldap php8.4-bcmath php8.4-sodium \
+        gnupg curl ca-certificates \
+    && rm -rf /var/lib/apt/lists/*
+
+ARG ROUNDCUBE_VERSION
+
+RUN echo "Installing Roundcube ${ROUNDCUBE_VERSION}" \
+    && curl -fsSL "https://github.com/roundcube/roundcubemail/releases/download/${ROUNDCUBE_VERSION}/roundcubemail-${ROUNDCUBE_VERSION}-complete.tar.gz" \
+        | tar xz -C /tmp \
+    && mv "/tmp/roundcubemail-${ROUNDCUBE_VERSION}" /opt/roundcube \
+    && rm -rf /opt/roundcube/installer /tmp/roundcubemail-*
+
+COPY etc/php-fpm.conf /etc/php/8.4/fpm/pool.d/roundcube.conf
+
+EXPOSE 9000
+COPY entrypoint.sh    /usr/local/bin/entrypoint.sh
+
+STOPSIGNAL SIGQUIT
+
+CMD ["/usr/local/bin/entrypoint.sh"]

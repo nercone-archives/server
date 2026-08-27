@@ -1,0 +1,39 @@
+compatibility_level = 3.10
+
+myhostname = smtp.nercone.dev
+myorigin   = $myhostname
+
+maillog_file = /dev/stdout
+
+inet_interfaces = 100.86.39.5, 127.0.0.1
+inet_protocols  = ipv4
+
+mydestination        =
+relay_domains        =
+local_recipient_maps =
+local_transport      = error:5.1.1 local delivery is disabled
+alias_maps           =
+alias_database       =
+
+mynetworks_style = host
+mynetworks       = 127.0.0.0/8 ${GCP_TAILNET_IP}/32
+
+smtpd_recipient_restrictions = permit_mynetworks, reject
+smtpd_relay_restrictions     = permit_mynetworks, reject_unauth_destination
+
+message_size_limit = 52428800
+
+smtpd_tls_cert_file      = /etc/ssl/certs/ssl-cert-snakeoil.pem
+smtpd_tls_key_file       = /etc/ssl/private/ssl-cert-snakeoil.key
+smtpd_tls_security_level = may
+smtpd_tls_loglevel       = 1
+
+smtp_tls_security_level = dane
+smtp_dns_support_level  = dnssec
+smtp_tls_loglevel       = 1
+smtp_helo_name          = $myhostname
+
+smtpd_helo_required = yes
+
+biff                = no
+append_dot_mydomain = no

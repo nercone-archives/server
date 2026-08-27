@@ -18,16 +18,35 @@ OPENSSL_VERSION=$(curl -fsSL "https://api.github.com/repos/openssl/openssl/relea
     | tail -1)
 echo "OpenSSL ${OPENSSL_VERSION}"
 
-MAIN_RELEASE=$(curl -fsSL "http://deb.debian.org/debian/dists/bookworm/Release")
-MAIN_HASH=$(echo "${MAIN_RELEASE}" | awk '/^SHA256:/{in_sha=1; next} in_sha && / main\/binary-amd64\/Packages$/{print $1; exit}')
-SECURITY_RELEASE=$(curl -fsSL "https://security.debian.org/debian-security/dists/bookworm-security/Release")
-SECURITY_HASH=$(echo "${SECURITY_RELEASE}" | awk '/^SHA256:/{in_sha=1; next} in_sha && / main\/binary-amd64\/Packages$/{print $1; exit}')
-PACKAGES_VERSION="${MAIN_HASH:0:16}-${SECURITY_HASH:0:16}"
-echo "Packages ${PACKAGES_VERSION}"
+ROUNDCUBE_VERSION=$(curl -fsSL "https://api.github.com/repos/roundcube/roundcubemail/releases?per_page=100" \
+    | grep -o '"tag_name": *"[^"]*"' \
+    | sed 's/.*"tag_name": *"\([^"]*\)".*/\1/' \
+    | grep -E '^[0-9]+\.[0-9]+\.[0-9]+$' \
+    | sort -V \
+    | tail -1)
+echo "Roundcube ${ROUNDCUBE_VERSION}"
+
+packages_version() {
+    local SUITE="$1"
+    local MAIN_RELEASE MAIN_HASH SECURITY_RELEASE SECURITY_HASH
+    MAIN_RELEASE=$(curl -fsSL "http://deb.debian.org/debian/dists/${SUITE}/Release")
+    MAIN_HASH=$(echo "${MAIN_RELEASE}" | awk '/^SHA256:/{in_sha=1; next} in_sha && / main\/binary-amd64\/Packages$/{print $1; exit}')
+    SECURITY_RELEASE=$(curl -fsSL "https://security.debian.org/debian-security/dists/${SUITE}-security/Release")
+    SECURITY_HASH=$(echo "${SECURITY_RELEASE}" | awk '/^SHA256:/{in_sha=1; next} in_sha && / main\/binary-amd64\/Packages$/{print $1; exit}')
+    echo "${MAIN_HASH:0:16}-${SECURITY_HASH:0:16}"
+}
+
+PACKAGES_VERSION=$(packages_version bookworm)
+echo "Packages (bookworm) ${PACKAGES_VERSION}"
+
+TRIXIE_PACKAGES_VERSION=$(packages_version trixie)
+echo "Packages (trixie) ${TRIXIE_PACKAGES_VERSION}"
 
 docker compose build \
+    --build-arg PACKAGES_VERSION="${PACKAGES_VERSION}" \
+    --build-arg TRIXIE_PACKAGES_VERSION="${TRIXIE_PACKAGES_VERSION}" \
     --build-arg NGINX_VERSION="${NGINX_VERSION}" \
     --build-arg OPENSSL_VERSION="${OPENSSL_VERSION}" \
-    --build-arg PACKAGES_VERSION="${PACKAGES_VERSION}"
+    --build-arg ROUNDCUBE_VERSION="${ROUNDCUBE_VERSION}"
 
 docker compose up -d

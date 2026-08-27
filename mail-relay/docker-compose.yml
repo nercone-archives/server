@@ -1,0 +1,12 @@
+services:
+  postfix:
+    container_name: postfix
+    build:
+      context: ./postfix
+    restart: unless-stopped
+    network_mode: host
+    environment:
+      - GCP_TAILNET_IP=${GCP_TAILNET_IP}
+    volumes:
+      - ./postfix/etc:/etc/postfix.d:ro
+      - ./data/spool:/var/spool/postfix
