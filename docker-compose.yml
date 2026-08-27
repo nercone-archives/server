@@ -113,7 +113,9 @@ services:
       - "25:25"
       - "127.0.0.1:10025:10025"
     networks:
-      - mail
+      mail:
+        aliases:
+          - postfix
     volumes:
       - ./mail/postfix/etc:/etc/postfix.d:ro
       - ./mail/data/spool:/var/spool/postfix
@@ -134,7 +136,9 @@ services:
     ports:
       - "127.0.0.1:10143:143"
     networks:
-      - mail
+      mail:
+        aliases:
+          - dovecot
     volumes:
       - ./mail/dovecot/etc:/etc/dovecot.d:ro
       - ./mail/dovecot/sieve:/etc/dovecot-sieve:ro
@@ -155,7 +159,9 @@ services:
     ports:
       - "127.0.0.1:10080:10080"
     networks:
-      - mail
+      mail:
+        aliases:
+          - auth
     depends_on:
       - mail-dovecot
 
@@ -169,7 +175,9 @@ services:
     ports:
       - "127.0.0.1:8083:9000"
     networks:
-      - mail
+      mail:
+        aliases:
+          - roundcube
     volumes:
       - ./mail/roundcube/etc:/etc/roundcube:ro
       - ./mail/roundcube/html:/var/www/roundcube
@@ -192,7 +200,9 @@ services:
     ports:
       - "127.0.0.1:11334:11334"
     networks:
-      - mail
+      mail:
+        aliases:
+          - rspamd
     volumes:
       - ./mail/rspamd/etc:/etc/rspamd.d:ro
       - ./mail/data/rspamd:/var/lib/rspamd
@@ -207,7 +217,9 @@ services:
     restart: unless-stopped
     command: ["redis-server", "--save", "300", "10", "--appendonly", "no"]
     networks:
-      - mail
+      mail:
+        aliases:
+          - redis
     volumes:
       - ./mail/data/redis:/data
 

@@ -28,19 +28,19 @@ if [ "${ACTIVATE}" = true ]; then
     echo "${DOMAIN} ${SELECTOR}" | sudo tee -a "${SELECTORS_MAP}" > /dev/null
     echo "Selector activated: ${DOMAIN} -> ${SELECTOR}"
 
-    docker compose exec rspamd rspamadm configtest
-    docker compose restart rspamd
+    docker compose exec mail-rspamd rspamadm configtest
+    docker compose restart mail-rspamd
 
     echo
     echo "Verify the signature on the next outgoing message, then remove the old selector's TXT record after a few days."
     exit 0
 fi
 
-KEYGEN_OUTPUT=$(docker compose exec -T rspamd \
+KEYGEN_OUTPUT=$(docker compose exec -T mail-rspamd \
     rspamadm dkim_keygen -b 2048 -s "${SELECTOR}" -d "${DOMAIN}" -k "/var/lib/rspamd/dkim/${KEY_NAME}")
 
-docker compose exec -T rspamd chown _rspamd:_rspamd "/var/lib/rspamd/dkim/${KEY_NAME}"
-docker compose exec -T rspamd chmod 600 "/var/lib/rspamd/dkim/${KEY_NAME}"
+docker compose exec -T mail-rspamd chown _rspamd:_rspamd "/var/lib/rspamd/dkim/${KEY_NAME}"
+docker compose exec -T mail-rspamd chmod 600 "/var/lib/rspamd/dkim/${KEY_NAME}"
 echo "DKIM key generated: ${DKIM_DIR}/${KEY_NAME}"
 
 RECORD=$(echo "${KEYGEN_OUTPUT}" | grep -oE '"[^"]*"' | tr -d '"' | tr -d '\n')

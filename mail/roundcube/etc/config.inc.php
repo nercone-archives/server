@@ -64,7 +64,7 @@ $config['managesieve_kolab_master'] = false;
 $config['password_driver']           = 'sql';
 $config['password_db_dsn']           = 'pgsql://mail:' . rawurlencode(getenv('MAIL_DB_PASSWORD')) . '@postgres/mail';
 $config['password_query']            = "UPDATE accounts SET password = %P WHERE username = %l AND domain = %d";
-$config['password_algorithm']        = 'argon2id';
+$config['password_algorithm']        = 'hash-argon2id';
 $config['password_algorithm_prefix'] = '{ARGON2ID}';
 $config['password_confirm_current']  = true;
 $config['password_minimum_length']   = 12;

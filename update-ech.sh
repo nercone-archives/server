@@ -19,7 +19,7 @@ OPENSSL_VERSION=$(curl -fsSL "https://api.github.com/repos/openssl/openssl/relea
 
 echo "OpenSSL ${OPENSSL_VERSION} (openssl-${OPENSSL_VERSION})"
 
-docker build --target openssl-builder -t proxy-openssl-builder --build-arg OPENSSL_VERSION="${OPENSSL_VERSION}" .
+docker build --target openssl-builder -t proxy-openssl-builder --build-arg OPENSSL_VERSION="${OPENSSL_VERSION}" ./proxy
 
 docker run --rm -v "${ECH_DIR}:/ech" proxy-openssl-builder /usr/local/bin/openssl ech -public_name "${PUBLIC_NAME}" -max_name_len "${MAX_NAME_LEN}" -out "/ech/${PUBLIC_NAME}.pem"
 chmod 600 "${PEM_FILE}"
