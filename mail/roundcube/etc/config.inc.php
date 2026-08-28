@@ -25,7 +25,7 @@ $config['log_driver']      = 'stdout';
 $config['temp_dir']        = '/var/lib/roundcube/temp';
 $config['session_lifetime'] = 60;
 
-$config['use_https']       = true;
+$config['use_https']       = false;
 $config['session_samesite'] = 'Strict';
 
 $config['plugins'] = [

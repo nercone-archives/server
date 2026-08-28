@@ -14,6 +14,18 @@ services:
       - /run/website:/run/website
       - ./mail/roundcube/html:/var/www/roundcube:ro
 
+  onion:
+    container_name: onion
+    build:
+      context: ./onion
+    restart: unless-stopped
+    network_mode: host
+    labels:
+      - com.centurylinklabs.watchtower.enable=false
+    volumes:
+      - ./onion/etc:/etc/tor.d:ro
+      - ./onion/data:/var/lib/tor
+
   gitea:
     container_name: gitea
     image: gitea/gitea:1.27

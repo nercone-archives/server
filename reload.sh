@@ -6,4 +6,6 @@ sudo git pull
 docker compose exec proxy nginx -t
 docker compose exec proxy nginx -s reload
 
+docker compose kill -s HUP onion
+
 docker compose restart mail-postfix mail-dovecot mail-rspamd mail-roundcube
