@@ -40,10 +40,12 @@ if anyof (header :contains "from" "linux-crypto@vger.kernel.org", header :contai
 	fileinto :copy "mailinglist.linux.crypto";
 }
 # rule:[mailinglist/linux/cve-announce]
-if anyof (header :contains "from" "linux-cve-announce@vger.kernel.org", header :contains "cc" "linux-cve-announce@vger.kernel.org", header :contains "to" "linux-cve-announce@vger.kernel.org")
+if anyof (header :contains "from" "cve@kernel.org", header :contains "cc" "cve@kernel.org", header :contains "to" "cve@kernel.org")
 {
 	addflag "\\Seen";
 	fileinto :copy "mailinglist.linux.cve-announce";
+	fileinto "mailinglist.linux";
+	stop;
 }
 # rule:[mailinglist/linux/kernel-announce]
 if anyof (header :contains "from" "linux-kernel-announce@vger.kernel.org", header :contains "cc" "linux-kernel-announce@vger.kernel.org", header :contains "to" "linux-kernel-announce@vger.kernel.org")
@@ -371,16 +373,15 @@ if anyof (header :contains "subject" "認証", header :contains "subject" "検�
 	fileinto "verification";
 	stop;
 }
-# rule:[dmarc-reports]
-if anyof (header :contains "from" "dmarc", header :contains "subject" "Report domain")
+# rule:[reports]
+if anyof (header :contains "to" "dmarc-reports@nercone.dev", header :contains "to" "tls-reports@nercone.dev")
 {
-	fileinto "dmarc-reports";
+	fileinto "reports";
 	stop;
 }
 # rule:[rspamd-spam]
-if allof (header :contains "X-Spam" "Yes", not header :contains "from" "linux-kernel@vger.kernel.org", not header :contains "to" "linux-kernel@vger.kernel.org", not header :contains "cc" "linux-kernel@vger.kernel.org", not header :contains "from" "linux-kernel-announce@vger.kernel.org", not header :contains "to" "linux-kernel-announce@vger.kernel.org", not header :contains "cc" "linux-kernel-announce@vger.kernel.org", not header :contains "from" "license-review@lists.opensource.org", not header :contains "to" "license-review@lists.opensource.org", not header :contains "cc" "license-review@lists.opensource.org", not header :contains "subject" "t3tra", not header :contains "from" "t3tra", not header :contains "to" "t3tra", not header :contains "cc" "t3tra", not body :text :contains "t3tra")
+if allof (header :contains "x-spam" "Yes", not header :contains "subject" "t3tra", not header :contains "from" "t3tra", not header :contains "to" "t3tra", not header :contains "cc" "t3tra", not body :text :contains "t3tra")
 {
-	addflag "\\Seen";
 	fileinto "Junk";
 	stop;
 }
