@@ -1,3 +1,5 @@
+# check=skip=InvalidDefaultArgInFrom
+
 ARG OPENSSL_IMAGE
 
 FROM ${OPENSSL_IMAGE} AS openssl-builder

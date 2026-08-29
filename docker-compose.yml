@@ -110,13 +110,13 @@ services:
       - -c
       - ssl_groups=X25519MLKEM768:secp384r1:secp256r1
       - -c
-      - hba_file=/etc/postgres-tls/pg_hba.conf
+      - hba_file=/etc/postgres/pg_hba.conf
     ports:
       - "127.0.0.1:5432:5432"
     volumes:
       - ./postgres/data:/var/lib/postgresql
       - ./postgres/initdb.d:/docker-entrypoint-initdb.d:ro
-      - ./postgres/pg_hba.conf:/etc/postgres-tls/pg_hba.conf:ro
+      - ./postgres/pg_hba.conf:/etc/postgres/pg_hba.conf:ro
       - ./tls/postgres:/etc/postgres-tls:ro
     networks:
       - default

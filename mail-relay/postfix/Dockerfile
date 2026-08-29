@@ -1,3 +1,5 @@
+# check=skip=InvalidDefaultArgInFrom
+
 ARG OPENSSL3_IMAGE
 
 FROM ${OPENSSL3_IMAGE} AS openssl
