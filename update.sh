@@ -1,7 +1,12 @@
 #!/usr/bin/env bash
 set -e
 
+echo "> Pull"
+
 sudo git pull
+
+echo
+echo "> Version Check"
 
 NGINX_VERSION=$(curl -fsSL "https://nginx.org/en/download.html" \
     | grep -oE 'nginx-[0-9]+\.[0-9]+\.[0-9]+\.tar\.gz' \
@@ -17,10 +22,10 @@ OPENSSL_VERSIONS=$(curl -fsSL "https://api.github.com/repos/openssl/openssl/rele
     | sort -V)
 
 OPENSSL_VERSION=$(echo "${OPENSSL_VERSIONS}" | tail -1)
-echo "OpenSSL ${OPENSSL_VERSION} (latest)"
+echo "OpenSSL ${OPENSSL_VERSION} (openssl-${OPENSSL_VERSION})"
 
 OPENSSL3_VERSION=$(echo "${OPENSSL_VERSIONS}" | grep -E '^3\.' | tail -1)
-echo "OpenSSL ${OPENSSL3_VERSION} (3.x)"
+echo "OpenSSL ${OPENSSL3_VERSION} (openssl-${OPENSSL3_VERSION})"
 
 ROUNDCUBE_VERSION=$(curl -fsSL "https://api.github.com/repos/roundcube/roundcubemail/releases?per_page=100" \
     | grep -o '"tag_name": *"[^"]*"' \
@@ -44,7 +49,10 @@ PACKAGES_VERSION=$(packages_version bookworm)
 echo "Packages (bookworm) ${PACKAGES_VERSION}"
 
 TRIXIE_PACKAGES_VERSION=$(packages_version trixie)
-echo "Packages (trixie) ${TRIXIE_PACKAGES_VERSION}"
+echo "Packages (trixie)   ${TRIXIE_PACKAGES_VERSION}"
+
+echo
+echo "> Build OpenSSL"
 
 docker build -t "nercone-openssl:${OPENSSL_VERSION}" \
     --build-arg PACKAGES_VERSION="${PACKAGES_VERSION}" \
@@ -56,6 +64,9 @@ docker build -t "nercone-openssl:${OPENSSL3_VERSION}" \
     --build-arg OPENSSL_VERSION="${OPENSSL3_VERSION}" \
     ./openssl
 
+echo
+echo "> Build"
+
 docker compose build \
     --build-arg PACKAGES_VERSION="${PACKAGES_VERSION}" \
     --build-arg TRIXIE_PACKAGES_VERSION="${TRIXIE_PACKAGES_VERSION}" \
@@ -64,7 +75,17 @@ docker compose build \
     --build-arg OPENSSL3_IMAGE="nercone-openssl:${OPENSSL3_VERSION}" \
     --build-arg ROUNDCUBE_VERSION="${ROUNDCUBE_VERSION}"
 
+echo
+echo "> Start"
+
 docker compose up -d
+
+echo
+echo "> Reload"
 
 docker compose exec proxy nginx -t
 docker compose exec proxy nginx -s reload
+
+docker compose kill -s HUP onion
+
+docker compose restart mail-postfix mail-dovecot mail-rspamd mail-roundcube

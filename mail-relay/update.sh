@@ -9,7 +9,7 @@ OPENSSL3_VERSION=$(curl -fsSL "https://api.github.com/repos/openssl/openssl/rele
     | grep -E '^3\.[0-9]+\.[0-9]+$' \
     | sort -V \
     | tail -1)
-echo "OpenSSL ${OPENSSL3_VERSION} (libssl.so.3)"
+echo "OpenSSL ${OPENSSL3_VERSION} (openssl-${OPENSSL3_VERSION})"
 
 packages_version() {
     local SUITE="$1"

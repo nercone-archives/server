@@ -3,6 +3,9 @@ set -e
 
 TLS_DIR="$(cd "$(dirname "$0")" && pwd)/tls"
 
+echo
+echo "> Version Check"
+
 OPENSSL_VERSION=$(curl -fsSL "https://api.github.com/repos/openssl/openssl/releases?per_page=100" \
     | grep -o '"tag_name": *"openssl-[^"]*"' \
     | sed 's/.*openssl-\([^"]*\)".*/\1/' \
@@ -12,9 +15,18 @@ OPENSSL_VERSION=$(curl -fsSL "https://api.github.com/repos/openssl/openssl/relea
 
 echo "OpenSSL ${OPENSSL_VERSION} (openssl-${OPENSSL_VERSION})"
 
+echo
+echo "> Build OpenSSL"
+
 docker build -t "nercone-openssl:${OPENSSL_VERSION}" --build-arg OPENSSL_VERSION="${OPENSSL_VERSION}" ./openssl
 
+echo
+echo "> Prepare"
+
 mkdir -p "${TLS_DIR}/ca" "${TLS_DIR}/postgres" "${TLS_DIR}/dovecot" "${TLS_DIR}/postfix" "${TLS_DIR}/roundcube" "${TLS_DIR}/auth"
+
+echo
+echo "> Generate Internal CA"
 
 if [ ! -f "${TLS_DIR}/ca/ca.pem" ]; then
     docker run --rm -v "${TLS_DIR}:/tls" "nercone-openssl:${OPENSSL_VERSION}" /usr/local/bin/openssl req \
@@ -24,6 +36,9 @@ if [ ! -f "${TLS_DIR}/ca/ca.pem" ]; then
     sudo chmod 600 "${TLS_DIR}/ca/ca.key"
     echo "Internal CA generated: ${TLS_DIR}/ca/ca.pem"
 fi
+
+echo
+echo "> Generate Service Certificate"
 
 for SERVICE in postgres dovecot postfix; do
     if [ ! -f "${TLS_DIR}/${SERVICE}/cert.pem" ]; then
@@ -44,13 +59,12 @@ for SERVICE in postgres dovecot postfix; do
     fi
 done
 
+echo
+echo "> Finalize"
+
 sudo chown 70:70 "${TLS_DIR}/postgres/key.pem"
 
 sudo cp "${TLS_DIR}/ca/ca.pem" "${TLS_DIR}/dovecot/ca.pem"
 sudo cp "${TLS_DIR}/ca/ca.pem" "${TLS_DIR}/postfix/ca.pem"
 sudo cp "${TLS_DIR}/ca/ca.pem" "${TLS_DIR}/roundcube/ca.pem"
 sudo cp "${TLS_DIR}/ca/ca.pem" "${TLS_DIR}/auth/ca.pem"
-
-echo
-echo "Restart the affected services to apply new certificates:"
-echo "  docker compose restart postgres mail-postfix mail-dovecot mail-auth mail-roundcube"
