@@ -1,7 +1,12 @@
 #!/usr/bin/env bash
 set -e
 
+echo "> Pull"
+
 sudo git pull
+
+echo
+echo "> Version Check"
 
 OPENSSL3_VERSION=$(curl -fsSL "https://api.github.com/repos/openssl/openssl/releases?per_page=100" \
     | grep -o '"tag_name": *"openssl-[^"]*"' \
@@ -27,13 +32,22 @@ echo "Packages (bookworm) ${PACKAGES_VERSION}"
 TRIXIE_PACKAGES_VERSION=$(packages_version trixie)
 echo "Packages (trixie) ${TRIXIE_PACKAGES_VERSION}"
 
+echo
+echo "> Build OpenSSL"
+
 docker build -t "nercone-openssl:${OPENSSL3_VERSION}" \
     --build-arg PACKAGES_VERSION="${PACKAGES_VERSION}" \
     --build-arg OPENSSL_VERSION="${OPENSSL3_VERSION}" \
     ../openssl
 
+echo
+echo "> Build"
+
 docker compose build \
     --build-arg TRIXIE_PACKAGES_VERSION="${TRIXIE_PACKAGES_VERSION}" \
     --build-arg OPENSSL3_IMAGE="nercone-openssl:${OPENSSL3_VERSION}"
+
+echo
+echo "> Start"
 
 docker compose up -d
