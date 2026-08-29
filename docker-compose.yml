@@ -157,6 +157,7 @@ services:
       - ./mail/data/vmail:/srv/vmail
     environment:
       - MAIL_DB_PASSWORD=${MAIL_DB_PASSWORD}
+      - RSPAMD_PASSWORD=${RSPAMD_PASSWORD}
     depends_on:
       postgres:
         condition: service_healthy
