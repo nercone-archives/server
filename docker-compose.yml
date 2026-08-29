@@ -43,6 +43,7 @@ services:
       - GITEA__database__NAME=gitea
       - GITEA__database__USER=gitea
       - GITEA__database__PASSWD=${GITEA_DB_PASSWORD}
+      - GITEA__database__SSL_MODE=require
       - GITEA__server__DOMAIN=git.nercone.dev
       - GITEA__server__ROOT_URL=https://git.nercone.dev/
     healthcheck:
@@ -93,11 +94,30 @@ services:
     container_name: postgres
     image: postgres:18-alpine
     restart: unless-stopped
+    command:
+      - -c
+      - ssl=on
+      - -c
+      - ssl_cert_file=/etc/postgres-tls/cert.pem
+      - -c
+      - ssl_key_file=/etc/postgres-tls/key.pem
+      - -c
+      - ssl_min_protocol_version=TLSv1.2
+      - -c
+      - ssl_ciphers=ECDHE-ECDSA-AES256-GCM-SHA384
+      - -c
+      - ssl_tls13_ciphers=TLS_AES_256_GCM_SHA384
+      - -c
+      - ssl_groups=X25519MLKEM768:secp384r1:secp256r1
+      - -c
+      - hba_file=/etc/postgres-tls/pg_hba.conf
     ports:
       - "127.0.0.1:5432:5432"
     volumes:
       - ./postgres/data:/var/lib/postgresql
       - ./postgres/initdb.d:/docker-entrypoint-initdb.d:ro
+      - ./postgres/pg_hba.conf:/etc/postgres-tls/pg_hba.conf:ro
+      - ./tls/postgres:/etc/postgres-tls:ro
     networks:
       - default
       - mail
@@ -131,6 +151,7 @@ services:
     volumes:
       - ./mail/postfix/etc:/etc/postfix.d:ro
       - ./mail/data/spool:/var/spool/postfix
+      - ./tls/postfix:/etc/postfix-tls:ro
       - /etc/letsencrypt:/etc/letsencrypt:ro
     environment:
       - MAIL_DB_PASSWORD=${MAIL_DB_PASSWORD}
@@ -154,6 +175,7 @@ services:
     volumes:
       - ./mail/dovecot/etc:/etc/dovecot.d:ro
       - ./mail/dovecot/sieve:/etc/dovecot-sieve:ro
+      - ./tls/dovecot:/etc/dovecot-tls:ro
       - ./mail/data/vmail:/srv/vmail
     environment:
       - MAIL_DB_PASSWORD=${MAIL_DB_PASSWORD}
@@ -175,6 +197,8 @@ services:
       mail:
         aliases:
           - auth
+    volumes:
+      - ./tls/auth:/srv/tls:ro
     depends_on:
       - mail-dovecot
 
@@ -194,6 +218,7 @@ services:
     volumes:
       - ./mail/roundcube/etc:/etc/roundcube:ro
       - ./mail/roundcube/html:/var/www/roundcube
+      - ./tls/roundcube:/etc/roundcube-tls:ro
       - ./mail/data/roundcube:/var/lib/roundcube
     environment:
       - ROUNDCUBE_DB_PASSWORD=${ROUNDCUBE_DB_PASSWORD}
@@ -221,6 +246,7 @@ services:
       - ./mail/data/rspamd:/var/lib/rspamd
     environment:
       - RSPAMD_PASSWORD=${RSPAMD_PASSWORD}
+      - REDIS_PASSWORD=${REDIS_PASSWORD}
     depends_on:
       - mail-redis
 
@@ -228,7 +254,7 @@ services:
     container_name: mail-redis
     image: redis:8-alpine
     restart: unless-stopped
-    command: ["redis-server", "--save", "300", "10", "--appendonly", "no"]
+    command: ["redis-server", "--save", "300", "10", "--appendonly", "no", "--requirepass", "${REDIS_PASSWORD}"]
     networks:
       mail:
         aliases:

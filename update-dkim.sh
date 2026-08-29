@@ -37,7 +37,7 @@ if [ "${ACTIVATE}" = true ]; then
 fi
 
 KEYGEN_OUTPUT=$(docker compose exec -T mail-rspamd \
-    rspamadm dkim_keygen -b 2048 -s "${SELECTOR}" -d "${DOMAIN}" -k "/var/lib/rspamd/dkim/${KEY_NAME}")
+    rspamadm dkim_keygen -b 3072 -s "${SELECTOR}" -d "${DOMAIN}" -k "/var/lib/rspamd/dkim/${KEY_NAME}")
 
 docker compose exec -T mail-rspamd chown _rspamd:_rspamd "/var/lib/rspamd/dkim/${KEY_NAME}"
 docker compose exec -T mail-rspamd chmod 600 "/var/lib/rspamd/dkim/${KEY_NAME}"

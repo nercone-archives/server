@@ -28,27 +28,46 @@ virtual_transport       = lmtp:inet:dovecot:24
 
 lmtp_host_lookup = native
 
+tls_config_file        = /etc/postfix/openssl.cnf
+tls_config_name        = postfix
+tls_preempt_cipherlist = yes
+tls_eecdh_auto_curves  = X25519MLKEM768 secp384r1 secp256r1
+
+internal_tls_exclude_ciphers = $smtpd_tls_exclude_ciphers, AES128, SHA1, SHA256
+
 relayhost                    = [100.86.39.5]:587
 smtp_tls_security_level      = encrypt
 smtp_tls_protocols           = >=TLSv1.2
 smtp_tls_mandatory_protocols = >=TLSv1.2
+smtp_tls_ciphers             = high
+smtp_tls_mandatory_ciphers   = high
+smtp_tls_exclude_ciphers     = $internal_tls_exclude_ciphers
 smtp_tls_loglevel            = 1
 smtp_helo_name               = $myhostname
 smtp_sasl_auth_enable        = no
+
+lmtp_tls_security_level    = secure
+lmtp_tls_CAfile            = /etc/postfix/tls/ca.pem
+lmtp_tls_ciphers           = high
+lmtp_tls_mandatory_ciphers = high
+lmtp_tls_exclude_ciphers   = $internal_tls_exclude_ciphers
+lmtp_tls_loglevel          = 1
 
 smtpd_sasl_type        = dovecot
 smtpd_sasl_path        = inet:dovecot:12345
 smtpd_sasl_auth_enable = no
 smtpd_tls_auth_only    = yes
 
-smtpd_tls_cert_file          = /etc/postfix/tls/fullchain.pem
-smtpd_tls_key_file           = /etc/postfix/tls/privkey.pem
-smtpd_tls_security_level     = may
-smtpd_tls_protocols          = >=TLSv1.2
+smtpd_tls_cert_file           = /etc/postfix/tls/fullchain.pem
+smtpd_tls_key_file            = /etc/postfix/tls/privkey.pem
+smtpd_tls_security_level      = may
+smtpd_tls_protocols           = >=TLSv1.2
 smtpd_tls_mandatory_protocols = >=TLSv1.2
-smtpd_tls_loglevel           = 1
-smtpd_tls_received_header    = yes
-tls_preempt_cipherlist       = no
+smtpd_tls_ciphers             = high
+smtpd_tls_mandatory_ciphers   = high
+smtpd_tls_exclude_ciphers     = aNULL, eNULL, kRSA, RC4, MD5, DES, 3DES, SEED, IDEA, CAMELLIA, ARIA, CHACHA20
+smtpd_tls_loglevel            = 1
+smtpd_tls_received_header     = yes
 
 smtpd_helo_required        = yes
 smtpd_helo_restrictions    = permit_mynetworks, reject_invalid_helo_hostname, reject_non_fqdn_helo_hostname

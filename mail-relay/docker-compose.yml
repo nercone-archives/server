@@ -10,3 +10,4 @@ services:
     volumes:
       - ./postfix/etc:/etc/postfix.d:ro
       - ./data/spool:/var/spool/postfix
+      - ./data/tls:/var/lib/postfix-tls

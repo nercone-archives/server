@@ -1,6 +1,7 @@
 import imaplib
 import os
 import socket
+import ssl
 from dataclasses import dataclass
 from enum import Enum
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
@@ -34,6 +35,7 @@ class Verifier:
     host: str
     port: int
     timeout: float
+    ca: str
 
     @classmethod
     def from_env(cls) -> "Verifier":
@@ -41,6 +43,7 @@ class Verifier:
             os.environ.get("VERIFY_HOST", "dovecot"),
             int(os.environ.get("VERIFY_PORT", 1143)),
             float(os.environ.get("VERIFY_TIMEOUT", 10)),
+            os.environ.get("VERIFY_CA", "/srv/tls/ca.pem"),
         )
 
     def verify(self, user: str, password: str) -> Status:
@@ -49,7 +52,8 @@ class Verifier:
         previous = socket.getdefaulttimeout()
         socket.setdefaulttimeout(self.timeout)
         try:
-            connection = imaplib.IMAP4(self.host, self.port)
+            context = ssl.create_default_context(cafile=self.ca)
+            connection = imaplib.IMAP4_SSL(self.host, self.port, ssl_context=context)
         except (OSError, imaplib.IMAP4.error):
             return Status.UNAVAILABLE
         finally:

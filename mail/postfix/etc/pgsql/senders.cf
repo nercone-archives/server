@@ -1,7 +1,4 @@
-hosts    = postgres
-dbname   = mail
-user     = mail
-password = ${MAIL_DB_PASSWORD}
+hosts = postgresql://mail:${MAIL_DB_PASSWORD}@postgres/mail?sslmode=verify-full&sslrootcert=/etc/postfix/tls/ca.pem
 
 query = SELECT username || '@' || domain AS login FROM accounts WHERE username = '%u' AND domain = '%d' AND active
         UNION

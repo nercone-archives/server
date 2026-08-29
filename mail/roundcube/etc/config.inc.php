@@ -2,17 +2,23 @@
 
 $config = [];
 
-$config['db_dsnw'] = 'pgsql://roundcube:' . rawurlencode(getenv('ROUNDCUBE_DB_PASSWORD')) . '@postgres/roundcube';
+$config['db_dsnw'] = 'pgsql://roundcube:' . rawurlencode(getenv('ROUNDCUBE_DB_PASSWORD')) . '@postgres/roundcube?sslmode=verify-full&sslrootcert=/etc/roundcube-tls/ca.pem';
 
-$config['imap_host']        = 'dovecot:1143';
-$config['smtp_host']        = 'postfix:10025';
+$config['imap_host']        = 'ssl://dovecot:1143';
+$config['smtp_host']        = 'tls://postfix:10025';
 $config['smtp_user']        = '%u';
 $config['smtp_pass']        = '%p';
-$config['managesieve_host'] = 'dovecot:4190';
+$config['smtp_timeout']     = 10;
+$config['managesieve_host'] = 'tls://dovecot:4190';
+
+$config['imap_conn_options']        = ['ssl' => ['verify_peer' => true, 'cafile' => '/etc/roundcube-tls/ca.pem']];
+$config['smtp_conn_options']        = ['ssl' => ['verify_peer' => true, 'cafile' => '/etc/roundcube-tls/ca.pem']];
+$config['managesieve_conn_options'] = ['ssl' => ['verify_peer' => true, 'cafile' => '/etc/roundcube-tls/ca.pem']];
 
 $config['support_url']  = '';
 $config['product_name'] = 'mx.nercone.dev';
 $config['des_key']      = getenv('ROUNDCUBE_DES_KEY');
+$config['cipher_method'] = 'AES-256-GCM';
 
 $config['username_domain'] = 'nercone.dev';
 $config['mail_domain']     = '%d';
@@ -62,7 +68,7 @@ $config['managesieve_script_name'] = 'roundcube';
 $config['managesieve_kolab_master'] = false;
 
 $config['password_driver']           = 'sql';
-$config['password_db_dsn']           = 'pgsql://mail:' . rawurlencode(getenv('MAIL_DB_PASSWORD')) . '@postgres/mail';
+$config['password_db_dsn']           = 'pgsql://mail:' . rawurlencode(getenv('MAIL_DB_PASSWORD')) . '@postgres/mail?sslmode=verify-full&sslrootcert=/etc/roundcube-tls/ca.pem';
 $config['password_query']            = "UPDATE accounts SET password = %P WHERE username = %l AND domain = %d";
 $config['password_algorithm']        = 'hash-argon2id';
 $config['password_algorithm_prefix'] = '{ARGON2ID}';

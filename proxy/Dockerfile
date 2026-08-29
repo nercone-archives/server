@@ -1,23 +1,6 @@
-FROM debian:bookworm-slim AS openssl-builder
+ARG OPENSSL_IMAGE
 
-WORKDIR /build
-
-ARG PACKAGES_VERSION
-
-RUN apt-get update && apt-get install -y --no-install-recommends curl perl build-essential ca-certificates zlib1g-dev \
-    && rm -rf /var/lib/apt/lists/*
-
-ARG OPENSSL_VERSION
-
-RUN echo "Building OpenSSL ${OPENSSL_VERSION}" \
-    && curl -fsSL "https://github.com/openssl/openssl/releases/download/openssl-${OPENSSL_VERSION}/openssl-${OPENSSL_VERSION}.tar.gz" | tar xz -C /tmp \
-    && cd "/tmp/openssl-${OPENSSL_VERSION}" \
-    && ./config --prefix=/usr/local --openssldir=/usr/local/etc/ssl --libdir=lib no-tests shared enable-ktls zlib \
-    && make -j"$(nproc)" \
-    && make install_sw install_ssldirs \
-    && rm -rf /tmp/openssl-*
-
-RUN echo "/usr/local/lib" > /etc/ld.so.conf.d/openssl.conf && ldconfig
+FROM ${OPENSSL_IMAGE} AS openssl-builder
 
 FROM debian:bookworm-slim AS nginx-builder
 
@@ -99,6 +82,7 @@ COPY --from=setup /var/www/roundcube /var/www/roundcube
 COPY --from=setup /run/website       /run/website
 
 COPY --from=nginx-builder /usr/local/lib/       /usr/local/lib/
+COPY --from=nginx-builder /usr/local/etc/ssl    /usr/local/etc/ssl
 COPY --from=nginx-builder /usr/sbin/nginx       /usr/sbin/nginx
 COPY --from=nginx-builder /etc/nginx/mime.types /usr/local/share/nginx/mime.types
 
