@@ -23,15 +23,19 @@ smtpd_relay_restrictions     = permit_mynetworks, reject_unauth_destination
 
 message_size_limit = 52428800
 
-smtpd_tls_cert_file      = /etc/ssl/certs/ssl-cert-snakeoil.pem
-smtpd_tls_key_file       = /etc/ssl/private/ssl-cert-snakeoil.key
-smtpd_tls_security_level = may
-smtpd_tls_loglevel       = 1
+smtpd_tls_cert_file           = /etc/ssl/certs/ssl-cert-snakeoil.pem
+smtpd_tls_key_file            = /etc/ssl/private/ssl-cert-snakeoil.key
+smtpd_tls_security_level      = may
+smtpd_tls_protocols           = >=TLSv1.2
+smtpd_tls_mandatory_protocols = >=TLSv1.2
+smtpd_tls_loglevel            = 1
 
-smtp_tls_security_level = dane
-smtp_dns_support_level  = dnssec
-smtp_tls_loglevel       = 1
-smtp_helo_name          = $myhostname
+smtp_tls_security_level      = dane
+smtp_dns_support_level       = dnssec
+smtp_tls_protocols           = >=TLSv1.2
+smtp_tls_mandatory_protocols = >=TLSv1.2
+smtp_tls_loglevel            = 1
+smtp_helo_name               = $myhostname
 
 smtpd_helo_required = yes
 

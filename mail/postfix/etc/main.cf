@@ -30,6 +30,7 @@ lmtp_host_lookup = native
 
 relayhost                    = [100.86.39.5]:587
 smtp_tls_security_level      = encrypt
+smtp_tls_protocols           = >=TLSv1.2
 smtp_tls_mandatory_protocols = >=TLSv1.2
 smtp_tls_loglevel            = 1
 smtp_helo_name               = $myhostname
