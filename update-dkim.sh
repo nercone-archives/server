@@ -1,54 +1,69 @@
 #!/usr/bin/env bash
 set -e
 
-ACTIVATE=false
-if [ "${1:-}" = "--activate" ]; then
-    ACTIVATE=true
-    shift
-fi
-
 DOMAIN="${1:-nercone.dev}"
 SELECTOR="${2:-$(date +%Y%m%d)}"
 
 DKIM_DIR="$(cd "$(dirname "$0")" && pwd)/mail/data/rspamd/dkim"
 KEY_NAME="${DOMAIN}.${SELECTOR}.key"
+KEY_PATH="/var/lib/rspamd/dkim/${KEY_NAME}"
 SELECTORS_MAP="${DKIM_DIR}/selectors.map"
 
 echo "Domain: ${DOMAIN}"
 echo "Selector: ${SELECTOR}"
 
-if [ "${ACTIVATE}" = true ]; then
-    if [ ! -f "${DKIM_DIR}/${KEY_NAME}" ]; then
-        echo "Key not found: ${DKIM_DIR}/${KEY_NAME}" >&2
-        exit 1
-    fi
+echo
+echo "> Generate DKIM Key"
 
-    sudo touch "${SELECTORS_MAP}"
-    sudo sed -i "/^${DOMAIN}[[:space:]]/d" "${SELECTORS_MAP}"
-    echo "${DOMAIN} ${SELECTOR}" | sudo tee -a "${SELECTORS_MAP}" > /dev/null
-    echo "Selector activated: ${DOMAIN} -> ${SELECTOR}"
-
-    docker compose exec mail-rspamd rspamadm configtest
-    docker compose restart mail-rspamd
-
-    echo
-    echo "Verify the signature on the next outgoing message, then remove the old selector's TXT record after a few days."
-    exit 0
+if [ -f "${DKIM_DIR}/${KEY_NAME}" ]; then
+    echo "DKIM key exists: ${DKIM_DIR}/${KEY_NAME}"
+else
+    docker compose exec -T mail-rspamd rspamadm dkim_keygen -b 3072 -s "${SELECTOR}" -d "${DOMAIN}" -k "${KEY_PATH}" > /dev/null
+    docker compose exec -T mail-rspamd chown _rspamd:_rspamd "${KEY_PATH}"
+    docker compose exec -T mail-rspamd chmod 600 "${KEY_PATH}"
+    echo "DKIM key generated: ${DKIM_DIR}/${KEY_NAME}"
 fi
 
-KEYGEN_OUTPUT=$(docker compose exec -T mail-rspamd \
-    rspamadm dkim_keygen -b 3072 -s "${SELECTOR}" -d "${DOMAIN}" -k "/var/lib/rspamd/dkim/${KEY_NAME}")
+echo
+echo "> Generate TXT Record"
 
-docker compose exec -T mail-rspamd chown _rspamd:_rspamd "/var/lib/rspamd/dkim/${KEY_NAME}"
-docker compose exec -T mail-rspamd chmod 600 "/var/lib/rspamd/dkim/${KEY_NAME}"
-echo "DKIM key generated: ${DKIM_DIR}/${KEY_NAME}"
+PUBLIC_KEY=$(docker compose exec -T mail-rspamd sh -c "/usr/local/bin/openssl rsa -in ${KEY_PATH} -pubout -outform DER 2>/dev/null | base64 | tr -d '\n'")
+if [ -z "${PUBLIC_KEY}" ]; then
+    echo "Public key not readable: ${DKIM_DIR}/${KEY_NAME}" >&2
+    exit 1
+fi
 
-RECORD=$(echo "${KEYGEN_OUTPUT}" | grep -oE '"[^"]*"' | tr -d '"' | tr -d '\n')
+printf "%-40s TXT \"%s\"\n" "${SELECTOR}._domainkey.${DOMAIN}." "v=DKIM1; k=rsa; p=${PUBLIC_KEY}"
+
 echo
-printf "%-40s TXT \"%s\"\n" "${SELECTOR}._domainkey.${DOMAIN}." "${RECORD}"
+echo "> Activate Selector"
+
+PREVIOUS_SELECTOR=$(sudo grep -E "^${DOMAIN}[[:space:]]" "${SELECTORS_MAP}" 2> /dev/null | awk '{print $2}' || true)
+
+sudo touch "${SELECTORS_MAP}"
+sudo sed -i "/^${DOMAIN}[[:space:]]/d" "${SELECTORS_MAP}"
+echo "${DOMAIN} ${SELECTOR}" | sudo tee -a "${SELECTORS_MAP}" > /dev/null
+echo "Selector activated: ${DOMAIN} -> ${SELECTOR}"
+
 echo
-echo "1. Publish the TXT record above."
-echo "2. Wait for DNS propagation (at least 1 hour)."
-echo "3. Run: ./update-dkim.sh --activate ${DOMAIN} ${SELECTOR}"
+echo "> Remove Previous Key"
+
+if [ -z "${PREVIOUS_SELECTOR}" ] || [ "${PREVIOUS_SELECTOR}" = "${SELECTOR}" ]; then
+    echo "No previous key to remove."
+else
+    PREVIOUS_KEY_NAME="${DOMAIN}.${PREVIOUS_SELECTOR}.key"
+    PREVIOUS_KEY_PATH="/var/lib/rspamd/dkim/${PREVIOUS_KEY_NAME}"
+
+    if [ -f "${DKIM_DIR}/${PREVIOUS_KEY_NAME}" ]; then
+        docker compose exec -T mail-rspamd rm -f "${PREVIOUS_KEY_PATH}"
+        echo "DKIM key removed: ${DKIM_DIR}/${PREVIOUS_KEY_NAME}"
+    else
+        echo "DKIM key not found: ${DKIM_DIR}/${PREVIOUS_KEY_NAME}"
+    fi
+fi
+
 echo
-echo "Switching the selector before the record propagates makes outgoing mail fail DKIM."
+echo "> Restart Rspamd"
+
+docker compose exec mail-rspamd rspamadm configtest
+docker compose restart mail-rspamd

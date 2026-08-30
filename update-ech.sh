@@ -28,7 +28,7 @@ echo "> Build OpenSSL"
 docker build -t "nercone-openssl:${OPENSSL_VERSION}" --build-arg OPENSSL_VERSION="${OPENSSL_VERSION}" ./openssl
 
 echo
-echo "> Generate ECH key"
+echo "> Generate ECH Key"
 
 docker run --rm -v "${ECH_DIR}:/ech" "nercone-openssl:${OPENSSL_VERSION}" /usr/local/bin/openssl ech -public_name "${PUBLIC_NAME}" -max_name_len "${MAX_NAME_LEN}" -out "/ech/${PUBLIC_NAME}.pem"
 chmod 600 "${PEM_FILE}"

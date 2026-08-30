@@ -32,6 +32,8 @@ if [ ! -f "${TLS_DIR}/ca/ca.pem" ]; then
     docker run --rm -v "${TLS_DIR}:/tls" "nercone-openssl:${OPENSSL_VERSION}" /usr/local/bin/openssl req \
         -x509 -newkey ec -pkeyopt ec_paramgen_curve:P-384 -sha384 -nodes -days 7300 \
         -subj "/CN=nercone internal CA" \
+        -addext "basicConstraints=critical,CA:TRUE" \
+        -addext "keyUsage=critical,keyCertSign,cRLSign" \
         -keyout /tls/ca/ca.key -out /tls/ca/ca.pem
     sudo chmod 600 "${TLS_DIR}/ca/ca.key"
     echo "Internal CA generated: ${TLS_DIR}/ca/ca.pem"
@@ -46,6 +48,7 @@ for SERVICE in postgres dovecot postfix; do
             -newkey ec -pkeyopt ec_paramgen_curve:P-384 -sha384 -nodes \
             -subj "/CN=${SERVICE}" \
             -addext "subjectAltName=DNS:${SERVICE}" \
+            -addext "keyUsage=critical,digitalSignature" \
             -addext "extendedKeyUsage=serverAuth" \
             -keyout "/tls/${SERVICE}/key.pem" -out "/tls/${SERVICE}/csr.pem"
         docker run --rm -v "${TLS_DIR}:/tls" "nercone-openssl:${OPENSSL_VERSION}" /usr/local/bin/openssl x509 \
